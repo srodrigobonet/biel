@@ -156,6 +156,11 @@ app.get("/webhook", (req, res) => {
 // Recepción de notificaciones
 app.post("/webhook", async (req, res) => {
   try {
+    console.log("WEBHOOK BODY:", JSON.stringify(req.body, null, 2));
+    const value = req.body?.entry?.[0]?.changes?.[0]?.value;
+    if (value?.statuses?.[0]) {
+      console.log("STATUS UPDATE:", JSON.stringify(value.statuses[0], null, 2));
+    }
     const body = req.body;
 
     // Estructura: entry[0].changes[0].value.messages[0]

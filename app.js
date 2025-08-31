@@ -82,7 +82,7 @@ async function sendButtonsMenu(to, bodyText = "Hola 👋 Soy el asistente de la 
         body: { text: bodyText },
         action: {
           buttons: [
-            { type: "reply", reply: { id: "opt_horario", title: "Consultar el horario ⏰" } },
+            { type: "reply", reply: { id: "opt_horario", title: "Consultar horario ⏰" } },
             { type: "reply", reply: { id: "opt_carta", title: "Ver la carta 🍽️" } },
             { type: "reply", reply: { id: "opt_pedido", title: "Hacer un pedido 🛒" } }
           ]

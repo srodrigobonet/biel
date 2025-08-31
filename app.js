@@ -5,9 +5,9 @@ const app = express();
 app.use(express.json());
 
 // ======== CONFIG (rellena .env) ========
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN; // TODO: .env
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN; // TODO: .env
-const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID; // TODO: .env
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN; // .env
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN; // .env
+const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID; // .env
 const PORT = process.env.PORT || 3000;
 
 // Meta Graph API (usa la versión estable actual)
@@ -69,7 +69,7 @@ async function sendText(to, text) {
   );
 }
 
-async function sendButtonsMenu(to, bodyText = "Hola 👋 Soy el asistente de la carnicería. Elige una opción:") {
+async function sendButtonsMenu(to, bodyText = "Hola 👋 Soy el asistente de la Carnicería Biel. Elija una opción:") {
   // Botones interactivos (máx. 3)
   return axios.post(
     GRAPH_URL,
@@ -82,9 +82,9 @@ async function sendButtonsMenu(to, bodyText = "Hola 👋 Soy el asistente de la 
         body: { text: bodyText },
         action: {
           buttons: [
-            { type: "reply", reply: { id: "opt_horario", title: "Horario" } },
-            { type: "reply", reply: { id: "opt_carta", title: "Carta" } },
-            { type: "reply", reply: { id: "opt_pedido", title: "Pedido" } }
+            { type: "reply", reply: { id: "opt_horario", title: "Consultar el horario ⏰" } },
+            { type: "reply", reply: { id: "opt_carta", title: "Ver la carta 🍽️" } },
+            { type: "reply", reply: { id: "opt_pedido", title: "Hacer un pedido 🛒" } }
           ]
         }
       }
@@ -97,30 +97,30 @@ async function handleOption(to, option) {
   switch (option) {
     case "horario": {
       const lines = [
-        "Horario:",
-        `lunes\t${HORARIO.lunes}`,
-        `martes\t${HORARIO.martes}`,
-        `miércoles\t${HORARIO.miércoles}`,
-        `jueves\t${HORARIO.jueves}`,
-        `viernes\t${HORARIO.viernes}`,
-        `sábado\t${HORARIO.sábado}`,
-        `domingo\t${HORARIO.domingo}`
+        "*Horario* ⏰",
+        `Lunes: ${HORARIO.lunes}`,
+        `Martes: ${HORARIO.martes}`,
+        `Miércoles: ${HORARIO.miércoles}`,
+        `Jueves: ${HORARIO.jueves}`,
+        `Viernes: ${HORARIO.viernes}`,
+        `Sábado: ${HORARIO.sábado}`,
+        `Domingo: ${HORARIO.domingo}`
       ].join("\n");
       await sendText(to, lines);
-      await sendButtonsMenu(to, "¿Deseas hacer algo más? Elige una opción:");
+      await sendButtonsMenu(to, "¿Desea hacer algo más?\n Elija una opción:");
       return;
     }
     case "carta": {
-      const txt = `Carta:\n- ${CARTA.join("\n- ")}`;
+      const txt = `*Carta* 🍽️ \n- ${CARTA.join("\n- ")}`;
       await sendText(to, txt);
-      await sendButtonsMenu(to, "¿Deseas hacer algo más? Elige una opción:");
+      await sendButtonsMenu(to, "¿Desea hacer algo más?\n Elija una opción:");
       return;
     }
     case "pedido": {
       userState.set(to, { awaitingOrder: true });
       await sendText(
         to,
-        "Para hacer tu pedido, por favor indica con detalle cómo quieres el corte (grosor, filetes, pieza, etc.)."
+        "Para hacer su pedido, por favor indique con detalle cómo quiere el corte (grosor, filetes, pieza, etc.)."
       );
       return;
     }
@@ -134,9 +134,9 @@ async function thankAndScheduleTomorrow(to) {
   const { day, slot } = getTomorrowScheduleEuropeMadrid();
   await sendText(
     to,
-    `¡Muchas gracias! Su pedido estará listo **mañana** con horario de (${day}): ${slot}`
+    `¡Muchas gracias! Su pedido estará listo *mañana* con horario de ${day}: ${slot}`
   );
-  await sendButtonsMenu(to, "¿Deseas hacer algo más? Elige una opción:");
+  // await sendButtonsMenu(to, "¿Desea hacer algo más? Elija una opción:");
 }
 
 // ======== ENDPOINTS ========

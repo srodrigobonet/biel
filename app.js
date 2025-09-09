@@ -224,7 +224,7 @@ const PRODUCTS_TEXT = {
 };
 
 const LIST_HEADER = { type: "text", text: "Carta 3IEL 🍽️" };
-const LIST_FOOTER = { text: "Los productos marcados con * son por encargo o según disponibilidad. Si se desea alguno, por favor haga el pedido antes de las 19h." };
+const LIST_FOOTER = { text: "Productos con * son por encargo antes de las 19h." };
 // Tiempo de "silencio" tras el mensaje de agradecimiento (en milisegundos)
 const MUTE_AFTER_THANKS_MS = 30 * 60 * 1000; // 30 min (ajústalo a tu gusto)
 
@@ -363,7 +363,7 @@ async function sendCategorySectionText(to, categoryKey) {
   const block = buildCategoryBlock(cat.title, items);
   await sendLongTextInChunks(to, block);
   // Luego tu menú de siempre (Horario / Carta / Pedido)
-  await sendButtonsMenu(to, "¿Desea hacer algo más? Elija una opción:");
+  await sendButtonsMenu(to, "¿Desea hacer algo más?\nElija una opción:");
 }
 
 
@@ -382,7 +382,7 @@ async function handleOption(to, option) {
         `Domingo: ${HORARIO.domingo}`
       ].join("\n");
       await sendText(to, lines);
-      await sendButtonsMenu(to, "¿Desea hacer algo más?\n Elija una opción:");
+      await sendButtonsMenu(to, "¿Desea hacer algo más?\nElija una opción:");
       return;
     }
     case "carta": {

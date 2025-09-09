@@ -32,7 +32,7 @@ const CATEGORIES_TEXT = [
   { key: "ternera", title: "Ternera" },
   { key: "cerdo", title: "Cerdo" },
   { key: "congelados", title: "Congelados caseros" },
-  { key: "asados_paellas", title: "Asados / Paellas" },
+  { key: "asados_paellas", title: "Asados / Paellas / Preparados del día" },
   { key: "conservas", title: "Conservas" },
 ];
 
@@ -84,6 +84,7 @@ const PRODUCTS_TEXT = {
     "Muslo relleno",
     "Churrasquitos de ternasco",
     "Churrasco",
+    "Juanicos",
   ],
   ave_conejo: [
     "Pollo entero",
@@ -196,6 +197,9 @@ const PRODUCTS_TEXT = {
     "Costilla de cerdo asada",
     "Paella de marisco (5/10p)",
     "Paella de carne (5/10p)",
+    "Migas",
+    "Albóndigas",
+    "Ensaladilla rusa",
   ],
   conservas: [
     "Conejo escabechado",
@@ -220,7 +224,7 @@ const PRODUCTS_TEXT = {
 };
 
 const LIST_HEADER = { type: "text", text: "Carta 3IEL 🍽️" };
-const LIST_FOOTER = { text: "Los marcados con * son por encargo o según disponibilidad." };
+const LIST_FOOTER = { text: "Los productos marcados con * son por encargo o según disponibilidad. Si se desea alguno, por favor haga el pedido antes de las 19h." };
 // Tiempo de "silencio" tras el mensaje de agradecimiento (en milisegundos)
 const MUTE_AFTER_THANKS_MS = 30 * 60 * 1000; // 30 min (ajústalo a tu gusto)
 
@@ -281,7 +285,7 @@ async function sendText(to, text) {
   );
 }
 
-async function sendButtonsMenu(to, bodyText = "Hola 👋 Soy el asistente de la Carnicería Biel. Elija una opción:") {
+async function sendButtonsMenu(to, bodyText = "Hola 👋 Soy el asistente de la Carnicería Biel.\nSíguenos en Instagram: https://www.instagram.com/carniceria3iel/\n\nElija una opción:") {
   // Botones interactivos (máx. 3)
   return axios.post(
     GRAPH_URL,

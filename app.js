@@ -24,11 +24,204 @@ const HORARIO = {
   domingo: "11:00–14:30"
 };
 
-const CARTA = [
-  // TODO: Sustituye por tu contenido real
-  "lista de carnes",
-  "lista de preparados"
+const CATEGORIES_TEXT = [
+  { key: "embutidos", title: "Embutidos" },
+  { key: "elaborados", title: "Elaborados" },
+  { key: "ave_conejo", title: "Ave / Conejo" },
+  { key: "ternasco", title: "Ternasco" },
+  { key: "ternera", title: "Ternera" },
+  { key: "cerdo", title: "Cerdo" },
+  { key: "congelados", title: "Congelados caseros" },
+  { key: "asados_paellas", title: "Asados / Paellas" },
+  { key: "conservas", title: "Conservas" },
 ];
+
+const PRODUCTS_TEXT = {
+  embutidos: [
+    "Lomo embuchado",
+    "Chorizo Pamplona",
+    "Chorizo Ibérico",
+    "Chorizo Lomo",
+    "Salchichón picado",
+    "Salchichón ibérico",
+    "Mortadela",
+    "Jamón York",
+    "Fiambre de pavo",
+    "Cecina",
+    "Jamón reserva",
+    "Jamón ibérico",
+    "Jamón de la Fueva",
+    "Longaniza artesana fresca",
+    "Chorizo artesano fresco",
+    "Chorizo artesano picante",
+    "Morcilla",
+    "Queso fresco",
+    "Queso curado Sansueña",
+    "Queso curado Cañarejal",
+    "Queso semicurado G. Baquero",
+    "Queso tierno tranchetes",
+    "Butifarra",
+    "Fuet",
+    "Bolos",
+    "Lomo Tarazona",
+    "Panceta curada",
+    "Punta jamón (caldo)",
+    "Hueso jamón (caldo)",
+  ],
+  elaborados: [
+    "Salchichas de pollo",
+    "Salchichas mixtas",
+    "Picada solo ternera",
+    "Picada mixta",
+    "Hamburguesas de pollo",
+    "Hamburguesas mixtas",
+    "Libritos de lomo",
+    "Pechuga rellena jamón-queso",
+    "Pechuga rellena paté-queso",
+    "Cachopos",
+    "San Jacobo",
+    "Pincho moruno",
+    "Muslo relleno",
+    "Churrasquitos de ternasco",
+    "Churrasco",
+  ],
+  ave_conejo: [
+    "Pollo entero",
+    "Muslo de pollo",
+    "Pechuga de pollo",
+    "Alas de pollo",
+    "Esqueleto de pollo",
+    "Pollo de corral *",
+    "Pollo certificado *",
+    "Gallina",
+    "Codorniz *",
+    "Conejo entero",
+    "Pechuga de pavo *",
+    "Pavo de estofar",
+    "Pavo al ajillo",
+    "Pavo entero *",
+    "Pavita *",
+    "Pularda *",
+    "Pato *",
+    "Higaditos *",
+  ],
+  ternasco: [
+    "Pierna",
+    "Costilla",
+    "Pierna y costilla",
+    "Paletillas",
+    "Jarretes",
+    "Alcorzadizo",
+    "Cuello",
+    "Lechecillas",
+    "Rabo",
+    "Cabezas *",
+    "Hígado *",
+    "Asaduras *",
+    "Riñones",
+    "Tripa y patas *",
+    "Sebo",
+    "Churrasquitos de ternasco",
+    "Medios y cuartos",
+    "Lechal *",
+    "Cabrito *",
+  ],
+  ternera: [
+    "Entrecot",
+    "Chuletón",
+    "Solomillo entero",
+    "Solomillo filetes",
+    "Ternera plancha",
+    "Ternera guisar a tacos",
+    "Ternera guisar a filetes",
+    "Costilla",
+    "Rabo *",
+    "Ternera de empanar",
+    "Hueso blanco",
+    "Carrilleras *",
+    "Lengua *",
+    "Manos de ternera *",
+  ],
+  cerdo: [
+    "Lomo cinta Teruel",
+    "Lomo hueso Teruel",
+    "Panceta Teruel",
+    "Cabezada Teruel",
+    "Secreto Teruel",
+    "Solomillo",
+    "Costilla",
+    "Papada",
+    "Magro",
+    "Esquinazo",
+    "Lomo cinta Ibérico",
+    "Lomo hueso Ibérico",
+    "Solomillo Ibérico",
+    "Tocino salado Ibérico",
+    "Lomo cinta Castañas",
+    "Lomo hueso Castañas",
+    "Cabezada Castañas",
+    "Solomillo Castañas",
+    "Carrilleras sin hueso *",
+    "Carrilleras con hueso *",
+    "Manitas de cerdo *",
+    "Rabo *",
+    "Careta *",
+    "Oreja *",
+    "Tocino fresco",
+    "Cochinillo *",
+    "Panceta adobada",
+    "Secreto adobado",
+    "Costilla adobada",
+  ],
+  congelados: [
+    "Albóndigas con tomate",
+    "Caldo",
+    "Estofado de ternera",
+    "Canelones de carne (4u)",
+    "Canelones de marisco (4u)",
+    "Lasaña boloñesa (2p)",
+    "Croquetas de jamón",
+    "Croquetas de cocido",
+    "Empanadillas (varios sabores)",
+    "Manitas de cerdo con tomate",
+    "Roti de ternasco guisado",
+    "Roti de pollo guisado",
+    "Vieira rellena de marisco",
+    "Nuggets de pollo",
+  ],
+  asados_paellas: [
+    "Pollo asado con patatas",
+    "Paletilla ternasco asada (patatas)",
+    "Conejo asado",
+    "Costilla de cerdo asada",
+    "Paella de marisco (5/10p)",
+    "Paella de carne (5/10p)",
+  ],
+  conservas: [
+    "Conejo escabechado",
+    "Perdiz caza escabechada",
+    "Perdiz escabechada",
+    "Codorniz escabechada",
+    "Conejo deshuesado",
+    "Piñón nacional",
+    "Atún en aceite",
+    "Atún escabeche",
+    "Atún aceite (pequeño)",
+    "Atún escabeche (pequeño)",
+    "Huevos",
+    "Huevos de corral",
+    "Espárragos de Navarra",
+    "Pimiento del piquillo",
+    "Tomate frito casero",
+    "Alubias Rosara",
+    "Garbanzos naturales Rosara",
+    "Lenteja Rosara",
+  ],
+};
+
+const LIST_HEADER = { type: "text", text: "Carta 3IEL" };
+const LIST_FOOTER = { text: "Los marcados con * son por encargo/según disponibilidad." };
+
 
 // ======== ESTADO EN MEMORIA (cámbialo por Redis/DB en prod) ========
 /** Map<string, { awaitingOrder: boolean }> por número de cliente */
@@ -93,6 +286,65 @@ async function sendButtonsMenu(to, bodyText = "Hola 👋 Soy el asistente de la 
   );
 }
 
+function buildCategoryBlock(title, items) {
+  const listado = items.map(i => `• ${i}`).join("\n");
+  return `*${title}*\n${listado}`;
+}
+
+// por si alguna categoría fuese larguísima, troceamos en partes de ~3500 chars
+async function sendLongTextInChunks(to, fullText, chunkSize = 3500) {
+  for (let i = 0; i < fullText.length; i += chunkSize) {
+    const part = fullText.slice(i, i + chunkSize);
+    await sendText(to, part);
+  }
+}
+
+// Envía la lista de CATEGORÍAS (selección única)
+async function sendListCategories(to) {
+  const sections = [{
+    title: "Elige una categoría",
+    rows: CATEGORIES_TEXT.map(c => ({
+      id: `cat:${c.key}`,
+      title: c.title.slice(0, 24) // títulos de fila ≤ 24 chars
+    }))
+  }];
+
+  return axios.post(
+    GRAPH_URL,
+    {
+      messaging_product: "whatsapp",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "list",
+        header: LIST_HEADER,
+        body: { text: "🍽️ Carta 3IEL: selecciona una categoría para verla completa." },
+        footer: LIST_FOOTER,
+        action: { button: "Ver categorías", sections }
+      }
+    },
+    { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } }
+  );
+}
+
+// Tras elegir la categoría, imprime TODO el texto de esa categoría (sin selección de productos)
+async function sendCategorySectionText(to, categoryKey) {
+  const cat = CATEGORIES_TEXT.find(c => c.key === categoryKey);
+  const items = PRODUCTS_TEXT[categoryKey] || [];
+  if (!cat || items.length === 0) {
+    await sendText(to, "No hay productos en esta categoría.");
+    // Ofrece volver a elegir categoría o al menú principal
+    await sendListCategories(to);
+    return;
+  }
+  const block = buildCategoryBlock(cat.title, items);
+  await sendLongTextInChunks(to, block);
+  // Luego tu menú de siempre (Horario / Carta / Pedido)
+  await sendButtonsMenu(to, "¿Desea hacer algo más? Elija una opción:");
+}
+
+
+
 async function handleOption(to, option) {
   switch (option) {
     case "horario": {
@@ -111,9 +363,7 @@ async function handleOption(to, option) {
       return;
     }
     case "carta": {
-      const txt = `*Carta* 🍽️ \n- ${CARTA.join("\n- ")}`;
-      await sendText(to, txt);
-      await sendButtonsMenu(to, "¿Desea hacer algo más?\n Elija una opción:");
+      await sendListCategories(to);
       return;
     }
     case "pedido": {
@@ -179,15 +429,37 @@ app.post("/webhook", async (req, res) => {
         return res.sendStatus(200);
       }
 
-      // Si pulsó botón interactivo
-      if (type === "interactive" && msg.interactive?.button_reply?.id) {
-        const id = msg.interactive.button_reply.id;
-        if (id === "opt_horario") await handleOption(from, "horario");
-        else if (id === "opt_carta") await handleOption(from, "carta");
-        else if (id === "opt_pedido") await handleOption(from, "pedido");
-        else await sendButtonsMenu(from);
+      if (type === "interactive") {
+        const br = msg.interactive?.button_reply;
+        const lr = msg.interactive?.list_reply;
+      
+        // Botones (tu lógica actual)
+        if (br?.id) {
+          const id = br.id;
+          if (id === "opt_horario") await handleOption(from, "horario");
+          else if (id === "opt_carta") await handleOption(from, "carta");
+          else if (id === "opt_pedido") await handleOption(from, "pedido");
+          else await sendButtonsMenu(from);
+          return res.sendStatus(200);
+        }
+      
+        // Listas (solo categorías)
+        if (lr?.id) {
+          const id = lr.id; // p.ej. "cat:embutidos"
+          if (id.startsWith("cat:")) {
+            const key = id.split(":")[1];
+            await sendCategorySectionText(from, key);  // imprime la categoría completa
+            return res.sendStatus(200);
+          }
+          // Si llega algo raro, vuelve al menú:
+          await sendButtonsMenu(from);
+          return res.sendStatus(200);
+        }
+      
+        // Si no es ni botón ni lista: vuelve al menú
+        await sendButtonsMenu(from);
         return res.sendStatus(200);
-      }
+      }      
 
       // Si escribió texto libre, también admitimos palabras clave o 1/2/3
       if (type === "text") {

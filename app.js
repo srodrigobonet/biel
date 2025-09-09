@@ -219,13 +219,32 @@ const PRODUCTS_TEXT = {
   ],
 };
 
-const LIST_HEADER = { type: "text", text: "Carta 3IEL" };
-const LIST_FOOTER = { text: "Los marcados con * son por encargo/según disponibilidad." };
+const LIST_HEADER = { type: "text", text: "Carta 3IEL 🍽️" };
+const LIST_FOOTER = { text: "Los marcados con * son por encargo o según disponibilidad." };
+// Tiempo de "silencio" tras el mensaje de agradecimiento (en milisegundos)
+const MUTE_AFTER_THANKS_MS = 30 * 60 * 1000; // 30 min (ajústalo a tu gusto)
+
 
 
 // ======== ESTADO EN MEMORIA (cámbialo por Redis/DB en prod) ========
 /** Map<string, { awaitingOrder: boolean }> por número de cliente */
 const userState = new Map();
+
+function getState(id) {
+  return userState.get(id) || { awaitingOrder: false, muteUntil: 0 };
+}
+function setState(id, partial) {
+  userState.set(id, { ...getState(id), ...partial });
+}
+function isMuted(id) {
+  const { muteUntil } = getState(id);
+  return muteUntil && Date.now() < muteUntil;
+}
+function clearMute(id) {
+  const st = getState(id);
+  if (st.muteUntil) setState(id, { muteUntil: 0 });
+}
+
 
 // ======== UTILIDADES ========
 function normalizeKeyword(text) {
@@ -318,7 +337,7 @@ async function sendListCategories(to) {
       interactive: {
         type: "list",
         header: LIST_HEADER,
-        body: { text: "🍽️ Carta 3IEL: selecciona una categoría para verla completa." },
+        body: { text: "Selecciona una categoría para ver la lista completa de productos." },
         footer: LIST_FOOTER,
         action: { button: "Ver categorías", sections }
       }
@@ -386,7 +405,7 @@ async function thankAndScheduleTomorrow(to) {
     to,
     `¡Muchas gracias! Su pedido estará listo *mañana* con horario de ${day}: ${slot}`
   );
-  // await sendButtonsMenu(to, "¿Desea hacer algo más? Elija una opción:");
+  setState(to, { awaitingOrder: false, muteUntil: Date.now() + MUTE_AFTER_THANKS_MS });
 }
 
 // ======== ENDPOINTS ========
@@ -435,6 +454,7 @@ app.post("/webhook", async (req, res) => {
       
         // Botones (tu lógica actual)
         if (br?.id) {
+          clearMute(from); // <-- permitir interacción durante el silencio
           const id = br.id;
           if (id === "opt_horario") await handleOption(from, "horario");
           else if (id === "opt_carta") await handleOption(from, "carta");
@@ -445,6 +465,7 @@ app.post("/webhook", async (req, res) => {
       
         // Listas (solo categorías)
         if (lr?.id) {
+          clearMute(from); // <-- permitir interacción durante el silencio
           const id = lr.id; // p.ej. "cat:embutidos"
           if (id.startsWith("cat:")) {
             const key = id.split(":")[1];
@@ -463,8 +484,15 @@ app.post("/webhook", async (req, res) => {
 
       // Si escribió texto libre, también admitimos palabras clave o 1/2/3
       if (type === "text") {
+        const bodyText = msg.text?.body || "";
         const kw = normalizeKeyword(msg.text?.body);
+        // Si estamos en "silencio" y NO ha pedido nada concreto, ignoramos
+        if (isMuted(from) && !kw) {
+          console.log(`Muted reply from ${from}: "${bodyText}"`);
+          return res.sendStatus(200);
+        }
         if (kw) {
+          clearMute(from);
           await handleOption(from, kw);
         } else {
           // Primer contacto o texto libre: mostramos menú

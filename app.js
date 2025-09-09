@@ -363,7 +363,7 @@ async function sendCategorySectionText(to, categoryKey) {
   const block = buildCategoryBlock(cat.title, items);
   await sendLongTextInChunks(to, block);
   // Luego tu menú de siempre (Horario / Carta / Pedido)
-  await sendButtonsMenu(to, "¿Desea hacer algo más? Elija una opción:");
+  await sendButtonsMenu(to, "¿Desea hacer algo más?\nElija una opción:");
 }
 
 
@@ -382,7 +382,7 @@ async function handleOption(to, option) {
         `Domingo: ${HORARIO.domingo}`
       ].join("\n");
       await sendText(to, lines);
-      await sendButtonsMenu(to, "¿Desea hacer algo más?\n Elija una opción:");
+      await sendButtonsMenu(to, "¿Desea hacer algo más?\nElija una opción:");
       return;
     }
     case "carta": {
@@ -390,7 +390,7 @@ async function handleOption(to, option) {
       return;
     }
     case "pedido": {
-      userState.set(to, { awaitingOrder: true });
+      setState(to, { awaitingOrder: true });
       await sendText(
         to,
         "Para hacer su pedido, por favor indique con detalle cómo quiere el corte (grosor, filetes, pieza, etc.)."
@@ -411,6 +411,27 @@ async function thankAndScheduleTomorrow(to) {
   );
   setState(to, { awaitingOrder: false, muteUntil: Date.now() + MUTE_AFTER_THANKS_MS });
 }
+
+function isPoliteAck(text) {
+  if (!text) return false;
+  const t = text.toLowerCase().trim();
+
+  // Palabras/frases típicas de cortesía
+  const acks = [
+    "gracias", "muchas gracias", "grac", "grcs",
+    "ok", "oki", "okey", "ok.", "ok!", "okkk",
+    "vale", "perfecto", "genial", "de acuerdo",
+    "nos vemos", "hasta luego", "hasta mañana", "hasta pronto",
+    "saludos", "un saludo", "thanks", "thank you"
+  ];
+
+  // Emojis y mensajes muy cortos tipo “👍”
+  const onlyEmojis = /^[\s👍👌🙏🙌✨🎉]+$/u.test(text);
+  const veryShortOk = /^(ok|vale|👍|👌|🙏)$/i.test(t);
+
+  return onlyEmojis || veryShortOk || acks.some(w => t === w || t.includes(w));
+}
+
 
 // ======== ENDPOINTS ========
 
@@ -490,18 +511,21 @@ app.post("/webhook", async (req, res) => {
       if (type === "text") {
         const bodyText = msg.text?.body || "";
         const kw = normalizeKeyword(msg.text?.body);
-        // Si estamos en "silencio" y NO ha pedido nada concreto, ignoramos
-        if (isMuted(from) && !kw) {
-          console.log(`Muted reply from ${from}: "${bodyText}"`);
+
+        // Si estamos en silencio y el mensaje es SOLO de cortesía, lo ignoramos
+        if (isMuted(from) && !kw && isPoliteAck(bodyText)) {
+          console.log(`Muted polite ack from ${from}: "${bodyText}"`);
           return res.sendStatus(200);
         }
         if (kw) {
           clearMute(from);
           await handleOption(from, kw);
-        } else {
-          // Primer contacto o texto libre: mostramos menú
-          await sendButtonsMenu(from);
+        } 
+        if (isMuted(from)) {
+          clearMute(from);
         }
+
+        await sendButtonsMenu(from);
         return res.sendStatus(200);
       }
 

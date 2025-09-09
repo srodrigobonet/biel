@@ -32,7 +32,7 @@ const CATEGORIES_TEXT = [
   { key: "ternera", title: "Ternera" },
   { key: "cerdo", title: "Cerdo" },
   { key: "congelados", title: "Congelados caseros" },
-  { key: "asados_paellas", title: "Asados / Paellas / Preparados del día" },
+  { key: "asados_paellas", title: "Asados/Paella/Preparados" },
   { key: "conservas", title: "Conservas" },
 ];
 

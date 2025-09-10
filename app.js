@@ -272,6 +272,39 @@ function getTomorrowScheduleEuropeMadrid() {
   return { day: weekday, slot: HORARIO[weekday] ?? "Cerrado" };
 }
 
+function getNextOpenScheduleEuropeMadrid(startOffsetDays = 1) {
+  // Devuelve el siguiente día ABIERTO a partir de hoy + startOffsetDays
+  // { day, slot, daysAhead }  → day en minúsculas ("martes"), slot = "8:00–14:00", daysAhead = 1/2/...
+  const tz = "Europe/Madrid";
+  const now = new Date();
+  const madridNow = new Date(now.toLocaleString("en-US", { timeZone: tz }));
+
+  for (let d = startOffsetDays; d < startOffsetDays + 7; d++) {
+    const target = new Date(madridNow.getTime() + d * 24 * 60 * 60 * 1000);
+    const weekday = target
+      .toLocaleDateString("es-ES", { weekday: "long", timeZone: tz })
+      .toLowerCase();
+
+    const slot = HORARIO[weekday] ?? "Cerrado";
+    if ((slot || "").toLowerCase() !== "cerrado") {
+      return { day: weekday, slot, daysAhead: d };
+    }
+  }
+
+  // Fallback: por si todo estuviera "Cerrado"
+  const target = new Date(madridNow.getTime() + startOffsetDays * 24 * 60 * 60 * 1000);
+  const weekday = target
+    .toLocaleDateString("es-ES", { weekday: "long", timeZone: tz })
+    .toLowerCase();
+  const slot = HORARIO[weekday] ?? "Cerrado";
+  return { day: weekday, slot, daysAhead: startOffsetDays };
+}
+
+function capFirst(s = "") {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+
 async function sendText(to, text) {
   return axios.post(
     GRAPH_URL,
@@ -393,7 +426,7 @@ async function handleOption(to, option) {
       userState.set(to, { awaitingOrder: true });
       await sendText(
         to,
-        "Para hacer su pedido, por favor indique con detalle cómo quiere el corte (grosor, filetes, pieza, etc.)."
+        "Para hacer su pedido, por favor indique con detalle cómo quiere que le preparemos cada producto:\n• Cantidad (g/kg/filetes/unidades)\n• Corte y grosor (filetes/dados/trozos/deshuesado...)\n• Cómo lo va a cocinar (guisar/horno/plancha/brasa...)"
       );
       return;
     }
@@ -404,13 +437,15 @@ async function handleOption(to, option) {
 }
 
 async function thankAndScheduleTomorrow(to) {
-  const { day, slot } = getTomorrowScheduleEuropeMadrid();
+  const { day, slot, daysAhead } = getNextOpenScheduleEuropeMadrid(1);
+  const cuando = daysAhead === 1 ? "mañana" : `el ${day}`;
   await sendText(
     to,
-    `¡Muchas gracias! Su pedido estará listo *mañana* con horario de ${day}: ${slot}`
+    `¡Muchas gracias! Su pedido estará listo *${cuando}* con horario de ${capFirst(day)}: ${slot}`
   );
   setState(to, { awaitingOrder: false, muteUntil: Date.now() + MUTE_AFTER_THANKS_MS });
 }
+
 
 // ======== ENDPOINTS ========
 

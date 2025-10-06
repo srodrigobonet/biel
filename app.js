@@ -10,7 +10,7 @@ const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN; // .env
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID; // .env
 const PORT = process.env.PORT || 3000;
 
-const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_URL = (process.env.UPSTASH_REDIS_REST_URL || "").replace(/\/+$/, "");
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 function hasRedis() { return !!(UPSTASH_URL && UPSTASH_TOKEN); }
 function ordersRedisKey(date = new Date()) { return `orders:${ymdEuropeMadrid(date)}`; }
@@ -280,21 +280,19 @@ async function saveOrder({ from, name, text, ts = new Date() }) {
   const entry = { from, name, text, ts: new Date(ts).toISOString() };
   if (hasRedis()) {
     try {
-      // Guarda en lista por día y caduca en 8 días
       await axios.post(
-        UPSTASH_URL,
-        { commands: [
+        `${UPSTASH_URL}/pipeline`,
+        [
           ["RPUSH", ordersRedisKey(ts), JSON.stringify(entry)],
-          ["EXPIRE", ordersRedisKey(ts), (60 * 60 * 24 * 8).toString()]
-        ]},
+          ["EXPIRE", ordersRedisKey(ts), 60 * 60 * 24 * 8] // 8 días (número)
+        ],
         { headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` } }
       );
       console.log("saveOrder → Redis OK:", ordersRedisKey(ts));
       return;
     } catch (e) {
       console.error("saveOrder → Redis ERROR:", e?.response?.data || e.message);
-      // sigue con fallback:
-    } 
+    }
   }
   // Fallback en memoria
   const key = ymdEuropeMadrid(ts);
@@ -305,39 +303,39 @@ async function saveOrder({ from, name, text, ts = new Date() }) {
 }
 
 
+
 async function getOrdersSummary(date = new Date()) {
   const ymd = ymdEuropeMadrid(date);
   let list = [];
   if (hasRedis()) {
     try {
       const { data } = await axios.post(
-        UPSTASH_URL,
-        { commands: [["LRANGE", ordersRedisKey(date), "0", "-1"]] },
+        `${UPSTASH_URL}`,
+        ["LRANGE", ordersRedisKey(date), "0", "-1"],
         { headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` } }
       );
-      const arr = (data?.[0]?.result) || [];
-      list = arr.map(s => { try { return JSON.parse(s); } catch { return null; } })
-                .filter(Boolean)
-                .map(o => ({ ...o, ts: new Date(o.ts) }));
+      const arr = data?.result || [];
+      list = arr
+        .map(s => { try { return JSON.parse(s); } catch { return null; } })
+        .filter(Boolean)
+        .map(o => ({ ...o, ts: new Date(o.ts) }));
       console.log("getOrdersSummary → Redis len:", list.length, "key:", ordersRedisKey(date));
     } catch (e) {
       console.error("getOrdersSummary → Redis ERROR:", e?.response?.data || e.message);
     }
-  } else {
-    list = (ordersByDate.get(ymd) || []).map(o => ({ ...o }));
+  }
+  if (!list.length) {
+    const mem = (ordersByDate.get(ymd) || []).map(o => ({ ...o }));
+    if (!mem.length) return `No hay pedidos en ${ymd}.`;
+    list = mem;
   }
 
-  if (!list.length) return `No hay pedidos en ${ymd}.`;
-
-  // Agrupar por cliente y formatear (igual que tenías)
+  // Formateo
   const byClient = new Map();
   for (const o of list) {
     const k = o.from;
-    const arr = byClient.get(k) || [];
-    arr.push(o);
-    byClient.set(k, arr);
+    (byClient.get(k) || byClient.set(k, []).get(k)).push(o);
   }
-
   const lines = [];
   lines.push(`*Resumen de pedidos ${ymd}*`);
   lines.push(`Total: ${list.length}`);
@@ -353,6 +351,7 @@ async function getOrdersSummary(date = new Date()) {
   }
   return lines.join("\n");
 }
+
 
 
 

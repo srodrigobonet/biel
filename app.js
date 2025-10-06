@@ -288,9 +288,11 @@ async function saveOrder({ from, name, text, ts = new Date() }) {
       ]},
       { headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` } }
     );
+    console.log("saveOrder → Redis OK:", ordersRedisKey(ts));
     return;
   }
   // Fallback en memoria
+  console.error("saveOrder → Redis ERROR:", e?.response?.data || e.message);
   const key = ymdEuropeMadrid(ts);
   const list = ordersByDate.get(key) || [];
   list.push({ from, name, text, ts: new Date(ts) });
@@ -311,7 +313,9 @@ async function getOrdersSummary(date = new Date()) {
     list = arr.map(s => { try { return JSON.parse(s); } catch { return null; } })
               .filter(Boolean)
               .map(o => ({ ...o, ts: new Date(o.ts) }));
+    console.log("getOrdersSummary → Redis len:", list.length, "key:", ordersRedisKey(date));
   } else {
+    console.error("getOrdersSummary → Redis ERROR:", e?.response?.data || e.message);
     list = (ordersByDate.get(ymd) || []).map(o => ({ ...o }));
   }
 
@@ -677,3 +681,6 @@ app.post("/webhook", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`WhatsApp bot listening on port ${PORT}`);
 });
+console.log("Redis configured?", !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN);
+console.log("UPSTASH_REDIS_REST_URL(prefix):", (process.env.UPSTASH_REDIS_REST_URL || "").slice(0, 40), "...");
+

@@ -279,24 +279,29 @@ function hmEuropeMadrid(date = new Date()) {
 async function saveOrder({ from, name, text, ts = new Date() }) {
   const entry = { from, name, text, ts: new Date(ts).toISOString() };
   if (hasRedis()) {
-    // Guarda en lista por día y caduca en 8 días
-    await axios.post(
-      UPSTASH_URL,
-      { commands: [
-        ["RPUSH", ordersRedisKey(ts), JSON.stringify(entry)],
-        ["EXPIRE", ordersRedisKey(ts), (60 * 60 * 24 * 8).toString()]
-      ]},
-      { headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` } }
-    );
-    console.log("saveOrder → Redis OK:", ordersRedisKey(ts));
-    return;
+    try {
+      // Guarda en lista por día y caduca en 8 días
+      await axios.post(
+        UPSTASH_URL,
+        { commands: [
+          ["RPUSH", ordersRedisKey(ts), JSON.stringify(entry)],
+          ["EXPIRE", ordersRedisKey(ts), (60 * 60 * 24 * 8).toString()]
+        ]},
+        { headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` } }
+      );
+      console.log("saveOrder → Redis OK:", ordersRedisKey(ts));
+      return;
+    } catch (e) {
+      console.error("saveOrder → Redis ERROR:", e?.response?.data || e.message);
+      // sigue con fallback:
+    } 
   }
   // Fallback en memoria
-  console.error("saveOrder → Redis ERROR:", e?.response?.data || e.message);
   const key = ymdEuropeMadrid(ts);
   const list = ordersByDate.get(key) || [];
   list.push({ from, name, text, ts: new Date(ts) });
   ordersByDate.set(key, list);
+  console.log("saveOrder → MEMORY:", key, "(Redis no disponible)");
 }
 
 
@@ -304,18 +309,21 @@ async function getOrdersSummary(date = new Date()) {
   const ymd = ymdEuropeMadrid(date);
   let list = [];
   if (hasRedis()) {
-    const { data } = await axios.post(
-      UPSTASH_URL,
-      { commands: [["LRANGE", ordersRedisKey(date), "0", "-1"]] },
-      { headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` } }
-    );
-    const arr = (data?.[0]?.result) || [];
-    list = arr.map(s => { try { return JSON.parse(s); } catch { return null; } })
-              .filter(Boolean)
-              .map(o => ({ ...o, ts: new Date(o.ts) }));
-    console.log("getOrdersSummary → Redis len:", list.length, "key:", ordersRedisKey(date));
+    try {
+      const { data } = await axios.post(
+        UPSTASH_URL,
+        { commands: [["LRANGE", ordersRedisKey(date), "0", "-1"]] },
+        { headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` } }
+      );
+      const arr = (data?.[0]?.result) || [];
+      list = arr.map(s => { try { return JSON.parse(s); } catch { return null; } })
+                .filter(Boolean)
+                .map(o => ({ ...o, ts: new Date(o.ts) }));
+      console.log("getOrdersSummary → Redis len:", list.length, "key:", ordersRedisKey(date));
+    } catch (e) {
+      console.error("getOrdersSummary → Redis ERROR:", e?.response?.data || e.message);
+    }
   } else {
-    console.error("getOrdersSummary → Redis ERROR:", e?.response?.data || e.message);
     list = (ordersByDate.get(ymd) || []).map(o => ({ ...o }));
   }
 

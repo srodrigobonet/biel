@@ -10,6 +10,12 @@ const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN; // .env
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID; // .env
 const PORT = process.env.PORT || 3000;
 
+const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+function hasRedis() { return !!(UPSTASH_URL && UPSTASH_TOKEN); }
+function ordersRedisKey(date = new Date()) { return `orders:${ymdEuropeMadrid(date)}`; }
+
+
 // Meta Graph API (usa la versión estable actual)
 const GRAPH_URL = `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`;
 
@@ -270,19 +276,48 @@ function hmEuropeMadrid(date = new Date()) {
   return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz });
 }
 
-function saveOrder({ from, name, text, ts = new Date() }) {
+async function saveOrder({ from, name, text, ts = new Date() }) {
+  const entry = { from, name, text, ts: new Date(ts).toISOString() };
+  if (hasRedis()) {
+    // Guarda en lista por día y caduca en 8 días
+    await axios.post(
+      UPSTASH_URL,
+      { commands: [
+        ["RPUSH", ordersRedisKey(ts), JSON.stringify(entry)],
+        ["EXPIRE", ordersRedisKey(ts), (60 * 60 * 24 * 8).toString()]
+      ]},
+      { headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` } }
+    );
+    return;
+  }
+  // Fallback en memoria
   const key = ymdEuropeMadrid(ts);
   const list = ordersByDate.get(key) || [];
-  list.push({ from, name, text, ts });
+  list.push({ from, name, text, ts: new Date(ts) });
   ordersByDate.set(key, list);
 }
 
-function getOrdersSummary(date = new Date()) {
-  const key = ymdEuropeMadrid(date);
-  const list = ordersByDate.get(key) || [];
-  if (!list.length) return `No hay pedidos en ${key}.`;
 
-  // Agrupar por cliente
+async function getOrdersSummary(date = new Date()) {
+  const ymd = ymdEuropeMadrid(date);
+  let list = [];
+  if (hasRedis()) {
+    const { data } = await axios.post(
+      UPSTASH_URL,
+      { commands: [["LRANGE", ordersRedisKey(date), "0", "-1"]] },
+      { headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` } }
+    );
+    const arr = (data?.[0]?.result) || [];
+    list = arr.map(s => { try { return JSON.parse(s); } catch { return null; } })
+              .filter(Boolean)
+              .map(o => ({ ...o, ts: new Date(o.ts) }));
+  } else {
+    list = (ordersByDate.get(ymd) || []).map(o => ({ ...o }));
+  }
+
+  if (!list.length) return `No hay pedidos en ${ymd}.`;
+
+  // Agrupar por cliente y formatear (igual que tenías)
   const byClient = new Map();
   for (const o of list) {
     const k = o.from;
@@ -292,17 +327,15 @@ function getOrdersSummary(date = new Date()) {
   }
 
   const lines = [];
-  lines.push(`*Resumen de pedidos ${key}*`);
+  lines.push(`*Resumen de pedidos ${ymd}*`);
   lines.push(`Total: ${list.length}`);
   lines.push("");
-
   for (const [k, arr] of byClient.entries()) {
     const nombre = arr[0].name || k;
     lines.push(`• *${nombre}* (${k})`);
     for (const o of arr) {
       const hora = hmEuropeMadrid(o.ts);
-      // primera línea del pedido (o todo, si prefieres)
-      const primLinea = o.text.split("\n")[0];
+      const primLinea = (o.text || "").split("\n")[0];
       lines.push(`   - ${hora} — ${primLinea}`);
     }
   }
@@ -552,7 +585,7 @@ app.post("/webhook", async (req, res) => {
       if (state?.awaitingOrder && type === "text") {
         const orderText = msg.text.body;
         // Guarda el pedido
-        saveOrder({
+        await saveOrder({
           from,
           name: contactNames.get(from),
           text: orderText,
@@ -605,7 +638,7 @@ app.post("/webhook", async (req, res) => {
 
         // 1) Comando de resumen (siempre se atiende, sin importar mute)
         if (bodyText === "resumen pedidos hoy") {
-          const summary = getOrdersSummary(new Date());
+          const summary = await getOrdersSummary(new Date());
           await sendText(from, summary);
           return res.sendStatus(200);
         }

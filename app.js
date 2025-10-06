@@ -8,6 +8,8 @@ app.use(express.json());
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN; // .env
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN; // .env
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID; // .env
+const BUTCHER_NUMBER = process.env.BUTCHER_NUMBER; // .env
+
 const PORT = process.env.PORT || 3000;
 
 // Meta Graph API (usa la versión estable actual)
@@ -250,6 +252,67 @@ function clearMute(id) {
 }
 
 
+
+// ===== PEDIDOS DEL DÍA (memoria) =====
+const contactNames = new Map(); // wa_id -> nombre (si lo envía WhatsApp)
+const ordersByDate = new Map(); // "YYYY-MM-DD" -> [{ from, name, text, ts }]
+
+function ymdEuropeMadrid(date = new Date()) {
+  const tz = "Europe/Madrid";
+  const d = new Date(date.toLocaleString("en-US", { timeZone: tz }));
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
+function hmEuropeMadrid(date = new Date()) {
+  const tz = "Europe/Madrid";
+  const d = new Date(date.toLocaleString("en-US", { timeZone: tz }));
+  return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz });
+}
+
+function saveOrder({ from, name, text, ts = new Date() }) {
+  const key = ymdEuropeMadrid(ts);
+  const list = ordersByDate.get(key) || [];
+  list.push({ from, name, text, ts });
+  ordersByDate.set(key, list);
+}
+
+function getOrdersSummary(date = new Date()) {
+  const key = ymdEuropeMadrid(date);
+  const list = ordersByDate.get(key) || [];
+  if (!list.length) return `No hay pedidos en ${key}.`;
+
+  // Agrupar por cliente
+  const byClient = new Map();
+  for (const o of list) {
+    const k = o.from;
+    const arr = byClient.get(k) || [];
+    arr.push(o);
+    byClient.set(k, arr);
+  }
+
+  const lines = [];
+  lines.push(`*Resumen de pedidos ${key}*`);
+  lines.push(`Total: ${list.length}`);
+  lines.push("");
+
+  for (const [k, arr] of byClient.entries()) {
+    const nombre = arr[0].name || k;
+    lines.push(`• *${nombre}* (${k})`);
+    for (const o of arr) {
+      const hora = hmEuropeMadrid(o.ts);
+      // primera línea del pedido (o todo, si prefieres)
+      const primLinea = o.text.split("\n")[0];
+      lines.push(`   - ${hora} — ${primLinea}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+
+
 // ======== UTILIDADES ========
 function normalizeKeyword(text) {
   if (!text) return "";
@@ -466,6 +529,15 @@ app.post("/webhook", async (req, res) => {
   try {
     console.log("WEBHOOK BODY:", JSON.stringify(req.body, null, 2));
     const value = req.body?.entry?.[0]?.changes?.[0]?.value;
+    
+    // Guarda nombre del contacto si viene
+    try {
+      const contact = value?.contacts?.[0];
+      if (contact?.wa_id && contact?.profile?.name) {
+        contactNames.set(contact.wa_id, contact.profile.name);
+      }
+    } catch {}
+
     if (value?.statuses?.[0]) {
       console.log("STATUS UPDATE:", JSON.stringify(value.statuses[0], null, 2));
     }
@@ -480,8 +552,15 @@ app.post("/webhook", async (req, res) => {
       // Si estamos esperando pedido, el siguiente texto es el pedido
       const state = userState.get(from);
       if (state?.awaitingOrder && type === "text") {
-        // Aquí podrías guardar el pedido en tu BD:
-        // TODO: guardar msg.text.body como 'pedido' en tu sistema
+        const orderText = msg.text.body;
+        // Guarda el pedido
+        saveOrder({
+          from,
+          name: contactNames.get(from),
+          text: orderText,
+          ts: new Date()
+        });
+
         userState.set(from, { awaitingOrder: false });
         await thankAndScheduleTomorrow(from);
         return res.sendStatus(200);
@@ -523,8 +602,31 @@ app.post("/webhook", async (req, res) => {
 
       // Si escribió texto libre, también admitimos palabras clave o 1/2/3
       if (type === "text") {
+
+        // ----- Comandos del carnicero (su número) -----
+        if (from === BUTCHER_NUMBER) {
+          const bodyText = (msg.text?.body || "").toLowerCase().trim();
+
+          if (bodyText === "resumen pedidos hoy" || bodyText === "resumen hoy" || bodyText === "resumen pedidos") {
+            const summary = getOrdersSummary(new Date());
+            await sendText(from, summary);
+            return res.sendStatus(200);
+          }
+
+          // (Opcional) "resumen pedidos YYYY-MM-DD"
+          const m = bodyText.match(/^resumen pedidos (\d{4}-\d{2}-\d{2})$/);
+          if (m) {
+            const date = new Date(m[1] + "T12:00:00"); // evitar líos zona horaria
+            const summary = getOrdersSummary(date);
+            await sendText(from, summary);
+            return res.sendStatus(200);
+          }
+
+        }
+
         const bodyText = msg.text?.body || "";
         const kw = normalizeKeyword(msg.text?.body);
+        
         // Si estamos en "silencio" y NO ha pedido nada concreto, ignoramos
         if (isMuted(from) && !kw) {
           console.log(`Muted reply from ${from}: "${bodyText}"`);

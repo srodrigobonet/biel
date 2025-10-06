@@ -270,6 +270,15 @@ function ymdEuropeMadrid(date = new Date()) {
   return `${y}-${m}-${dd}`;
 }
 
+function dmyEuropeMadrid(date = new Date()) {
+  const tz = "Europe/Madrid";
+  const d = new Date(date.toLocaleString("en-US", { timeZone: tz }));
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+}
+
 function hmEuropeMadrid(date = new Date()) {
   const tz = "Europe/Madrid";
   const d = new Date(date.toLocaleString("en-US", { timeZone: tz }));
@@ -284,7 +293,7 @@ async function saveOrder({ from, name, text, ts = new Date() }) {
         `${UPSTASH_URL}/pipeline`,
         [
           ["RPUSH", ordersRedisKey(ts), JSON.stringify(entry)],
-          ["EXPIRE", ordersRedisKey(ts), 60 * 60 * 24 * 8] // 8 días (número)
+          ["EXPIRE", ordersRedisKey(ts), 60 * 60 * 24 * 8] // 8 días se guarda el pedido
         ],
         { headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` } }
       );
@@ -306,6 +315,7 @@ async function saveOrder({ from, name, text, ts = new Date() }) {
 
 async function getOrdersSummary(date = new Date()) {
   const ymd = ymdEuropeMadrid(date);
+  const displayDate = dmyEuropeMadrid(date); 
   let list = [];
   if (hasRedis()) {
     try {
@@ -326,7 +336,7 @@ async function getOrdersSummary(date = new Date()) {
   }
   if (!list.length) {
     const mem = (ordersByDate.get(ymd) || []).map(o => ({ ...o }));
-    if (!mem.length) return `No hay pedidos en ${ymd}.`;
+    if (!mem.length) return `No hay pedidos en ${displayDate}.`;
     list = mem;
   }
 
@@ -337,7 +347,7 @@ async function getOrdersSummary(date = new Date()) {
     (byClient.get(k) || byClient.set(k, []).get(k)).push(o);
   }
   const lines = [];
-  lines.push(`*Resumen de pedidos ${ymd}*`);
+  lines.push(`*Resumen de pedidos ${displayDate}*`);
   lines.push(`Total: ${list.length}`);
   lines.push("");
   for (const [k, arr] of byClient.entries()) {

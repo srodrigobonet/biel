@@ -8,8 +8,6 @@ app.use(express.json());
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN; // .env
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN; // .env
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID; // .env
-const BUTCHER_NUMBER = process.env.BUTCHER_NUMBER; // .env
-
 const PORT = process.env.PORT || 3000;
 
 // Meta Graph API (usa la versión estable actual)
@@ -228,7 +226,7 @@ const PRODUCTS_TEXT = {
 const LIST_HEADER = { type: "text", text: "Carta 3IEL 🍽️" };
 const LIST_FOOTER = { text: "Productos con * son por encargo antes de las 19h." };
 // Tiempo de "silencio" tras el mensaje de agradecimiento (en milisegundos)
-const MUTE_AFTER_THANKS_MS = 30 * 60 * 1000; // 30 min (ajústalo a tu gusto)
+const MUTE_AFTER_THANKS_MS = 2 * 60 * 1000; // 2 min (ajústalo a tu gusto)
 
 
 
@@ -602,31 +600,19 @@ app.post("/webhook", async (req, res) => {
 
       // Si escribió texto libre, también admitimos palabras clave o 1/2/3
       if (type === "text") {
+        const bodyTextRaw = msg.text?.body || "";
+        const bodyText = bodyTextRaw.toLowerCase().trim();
 
-        // ----- Comandos del carnicero (su número) -----
-        if (from === BUTCHER_NUMBER) {
-          const bodyText = (msg.text?.body || "").toLowerCase().trim();
-
-          if (bodyText === "resumen pedidos hoy" || bodyText === "resumen hoy" || bodyText === "resumen pedidos") {
-            const summary = getOrdersSummary(new Date());
-            await sendText(from, summary);
-            return res.sendStatus(200);
-          }
-
-          // (Opcional) "resumen pedidos YYYY-MM-DD"
-          const m = bodyText.match(/^resumen pedidos (\d{4}-\d{2}-\d{2})$/);
-          if (m) {
-            const date = new Date(m[1] + "T12:00:00"); // evitar líos zona horaria
-            const summary = getOrdersSummary(date);
-            await sendText(from, summary);
-            return res.sendStatus(200);
-          }
-
+        // 1) Comando de resumen (siempre se atiende, sin importar mute)
+        if (bodyText === "resumen pedidos hoy") {
+          const summary = getOrdersSummary(new Date());
+          await sendText(from, summary);
+          return res.sendStatus(200);
         }
 
-        const bodyText = msg.text?.body || "";
+        // 2) Resto de lógica
         const kw = normalizeKeyword(msg.text?.body);
-        
+
         // Si estamos en "silencio" y NO ha pedido nada concreto, ignoramos
         if (isMuted(from) && !kw) {
           console.log(`Muted reply from ${from}: "${bodyText}"`);

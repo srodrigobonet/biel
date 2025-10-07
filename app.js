@@ -232,7 +232,7 @@ const PRODUCTS_TEXT = {
 const LIST_HEADER = { type: "text", text: "Carta 3IEL 🍽️" };
 const LIST_FOOTER = { text: "Productos con * son por encargo antes de las 19h." };
 // Tiempo de "silencio" tras el mensaje de agradecimiento (en milisegundos)
-const MUTE_AFTER_THANKS_MS = 10 * 60 * 1000; // 10 min (ajústalo a tu gusto)
+const MUTE_AFTER_THANKS_MS = 15 * 60 * 1000; // 15 min (ajústalo a tu gusto)
 
 
 
@@ -433,7 +433,7 @@ async function sendText(to, text) {
   );
 }
 
-async function sendButtonsMenu(to, bodyText = "Hola 👋 Soy el asistente de la Carnicería Biel.\nSíguenos en Instagram: https://www.instagram.com/carniceria3iel/\nPara cualquier consulta llame al 663285129.\nElija una opción:") {
+async function sendButtonsMenu(to, bodyText = "Hola 👋 Soy el asistente de la Carnicería Biel.\n\nSíguenos en Instagram: https://www.instagram.com/carniceria3iel/\nPara cualquier consulta llame al 663285129.\n\nElija una opción:") {
   // Botones interactivos (máx. 3)
   return axios.post(
     GRAPH_URL,

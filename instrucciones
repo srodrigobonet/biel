@@ -1,0 +1,28 @@
+1.Entra en developers.facebook.com con una cuenta de Facebook y crea una App, añadiendo el caso de uso de conectarte con clientes a través de Whatsapp.
+
+2.Generar un token de acceso en: Configuración del negocio y haz clic en Usuarios del sistema. Añade un usuario admin con permiso a todo. Asignale todos los activos. Generar identificador permanente con al menos los 3 permisos de whatsapp. Añadirlo a .env como WHATSAPP_TOKEN.
+
+3.Añade el nº de telefono en: Configuración de API, abajo, Paso 5: Agregar un número de teléfono. 
+
+4.Copia en .env el Identificador de número de teléfono como WHATSAPP_PHONE_NUMBER_ID, el Identificador de la cuenta de WhatsApp Business como WHATSAPP_WABA_ID y la APP_ID.
+
+5.En configuración de la app puedes añadir logo o lo que te pida.
+
+6.Despliega el código del chatbot en Github y en una URL pública HTTPS (Render - Web Service) siguiendo las instrucciones de Test webhook app.
+
+7.Configura webhook: En el caso de uso de Whatsapp -> configuración -> webhooks, añade Callback URL de Render https://TU-DOMINIO/webhook e inventa un VERIFY_TOKEN para ahi y para .env. Verifica y guarda. Selecciona el producto Whatsapp Business Account y suscribe el campo “messages”.
+
+8.Añade un método de pago en inicio rápido: Facturación y pagos -> Métodos de pago (no se cobran las conversaciones de ventana 24h si las empieza el cliente, tambien hay 1000 al mes gratis si las empieza la empresa). Adjudica ese método de pago en Cuentas de Whatsapp -> Editar info empresa.
+
+9.Escribe desde tu numero personal al de empresa cualquier mensaje (para abrir ventana 24h) y probar
+
+curl -X POST "https://graph.facebook.com/v20.0/$WHATSAPP_PHONE_NUMBER_ID/messages" \
+  -H "Authorization: Bearer $WHATSAPP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messaging_product":"whatsapp",
+    "to":"34TU_NUMERO_PERSONAL",
+    "type":"text",
+    "text":{"body":"Prueba inicial desde la Cloud API ✅"}
+  }'
+

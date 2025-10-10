@@ -561,8 +561,7 @@ async function handleOption(to, option) {
       userState.set(to, { awaitingOrder: true });
       await sendText(
         to,
-        "*Importante*\n\nPara hacer su pedido, por favor indique con detalle en *un solo mensaje* cómo quiere que le preparemos cada producto:\n\n• Cantidad (g/kg/filetes/unidades)\n• Corte y grosor (filetes/dados/trozos/deshuesado...)\n• Cómo lo va a cocinar (guisar/horno/plancha/brasa...)\n\nAñada al final del pedido el nombre de la persona que irá a recogerlo."
-      );
+        "*Importante*⚠️\n\nPor favor, envíe *todo su pedido en un solo mensaje*, indicando para cada producto:\n\n• Cantidad (g/kg/filetes/unidades)\n• Corte y grosor (filetes, dados, trozos, deshuesado...)\n• Cómo lo va a cocinar (guisar, horno, plancha, brasa...)\n\nAl final del mensaje, indique el nombre de la persona que irá a recoger el pedido."      );
       return;
     }
     default:

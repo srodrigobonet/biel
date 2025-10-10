@@ -529,7 +529,7 @@ async function sendCategorySectionText(to, categoryKey) {
   const block = buildCategoryBlock(cat.title, items);
   await sendLongTextInChunks(to, block);
   // Luego tu menú de siempre (Horario / Carta / Pedido)
-  await greetOnce(to, "¿Desea hacer algo más?\nElija una opción:");
+  await sendButtonsMenu(to, "¿Desea hacer algo más?\nElija una opción:");
 }
 
 

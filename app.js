@@ -233,7 +233,7 @@ const LIST_HEADER = { type: "text", text: "Carta 3IEL 🍽️" };
 const LIST_FOOTER = { text: "Productos con * son por encargo antes de las 19h." };
 // Tiempo de "silencio" tras el mensaje de agradecimiento (en milisegundos)
 const MUTE_AFTER_THANKS_MS = 15 * 60 * 1000; // 15 min (ajústalo a tu gusto)
-
+const GREETING_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutos
 
 
 // ======== ESTADO EN MEMORIA (cámbialo por Redis/DB en prod) ========
@@ -241,7 +241,7 @@ const MUTE_AFTER_THANKS_MS = 15 * 60 * 1000; // 15 min (ajústalo a tu gusto)
 const userState = new Map();
 
 function getState(id) {
-  return userState.get(id) || { awaitingOrder: false, muteUntil: 0 };
+  return userState.get(id) || { awaitingOrder: false, muteUntil: 0, greetedAt: 0 };
 }
 function setState(id, partial) {
   userState.set(id, { ...getState(id), ...partial });
@@ -253,6 +253,20 @@ function isMuted(id) {
 function clearMute(id) {
   const st = getState(id);
   if (st.muteUntil) setState(id, { muteUntil: 0 });
+}
+
+
+// ======== HELPERS DE SALUDO/MENÚ ========
+async function greetOnce(to, bodyText) {
+  const { greetedAt } = getState(to);
+  const now = Date.now();
+  if (!greetedAt || (now - greetedAt) > GREETING_COOLDOWN_MS) {
+    await sendButtonsMenu(to, bodyText);
+    setState(to, { greetedAt: now });
+  } else {
+    // Dentro del cooldown: no reenvía el saludo/menú
+    console.log(`Skip greeting for ${to} (cooldown)`);
+  }
 }
 
 
@@ -515,7 +529,7 @@ async function sendCategorySectionText(to, categoryKey) {
   const block = buildCategoryBlock(cat.title, items);
   await sendLongTextInChunks(to, block);
   // Luego tu menú de siempre (Horario / Carta / Pedido)
-  await sendButtonsMenu(to, "¿Desea hacer algo más?\nElija una opción:");
+  await greetOnce(to, "¿Desea hacer algo más?\nElija una opción:");
 }
 
 
@@ -531,7 +545,9 @@ async function handleOption(to, option) {
         `Jueves: ${HORARIO.jueves}`,
         `Viernes: ${HORARIO.viernes}`,
         `Sábado: ${HORARIO.sábado}`,
-        `Domingo: ${HORARIO.domingo}`
+        `Domingo: ${HORARIO.domingo}`,
+        "",
+        "_El horario puede verse modificado por festivos._"
       ].join("\n");
       await sendText(to, lines);
       await sendButtonsMenu(to, "¿Desea hacer algo más?\nElija una opción:");
@@ -558,10 +574,22 @@ async function handleOption(to, option) {
 async function thankAndScheduleTomorrow(to) {
   const { day, slot, daysAhead } = getNextOpenScheduleEuropeMadrid(1);
   const cuando = daysAhead === 1 ? "mañana" : `el ${day}`;
-  await sendText(
-    to,
-    `¡Muchas gracias! Su pedido estará listo *${cuando}* con horario de ${capFirst(day)}: ${slot}`
-  );
+  // Mensaje base
+  let mensaje = `¡Muchas gracias! Su pedido estará listo *${cuando}* con horario de ${capFirst(day)}: ${slot}.\n\nSi desea modificar o cancelar su pedido, llame al 976185848 en horario comercial.`;
+
+  // Añade felicitación si estamos entre el 20 de diciembre y el 6 de enero
+  const hoy = new Date();
+  const mes = hoy.getMonth() + 1; // 1–12
+  const dia = hoy.getDate();
+
+  const esNavidad =
+    (mes === 12 && dia >= 20) || (mes === 1 && dia <= 6);
+
+  if (esNavidad) {
+    mensaje += `\n\n¡Feliz Navidad y próspero Año Nuevo!🎄`;
+  }
+
+  await sendText(to, mensaje);
   setState(to, { awaitingOrder: false, muteUntil: Date.now() + MUTE_AFTER_THANKS_MS });
 }
 
@@ -652,7 +680,7 @@ app.post("/webhook", async (req, res) => {
         }
       
         // Si no es ni botón ni lista: vuelve al menú
-        await sendButtonsMenu(from);
+        await greetOnce(from);
         return res.sendStatus(200);
       }      
 
@@ -681,13 +709,13 @@ app.post("/webhook", async (req, res) => {
           await handleOption(from, kw);
         } else {
           // Primer contacto o texto libre: mostramos menú
-          await sendButtonsMenu(from);
+          await greetOnce(from);
         }
         return res.sendStatus(200);
       }
 
       // Otros tipos (imágenes, etc.): responde con menú
-      await sendButtonsMenu(from);
+      await greetOnce(from);
       return res.sendStatus(200);
     }
 

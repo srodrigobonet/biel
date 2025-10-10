@@ -355,8 +355,12 @@ async function getOrdersSummary(date = new Date()) {
     lines.push(`• *${nombre}* (${k})`);
     for (const o of arr) {
       const hora = hmEuropeMadrid(o.ts);
-      const primLinea = (o.text || "").split("\n")[0];
-      lines.push(`   - ${hora} — ${primLinea}`);
+      const pedido = (o.text || "").trim();
+      // Opcional: normaliza saltos de línea extra
+      const pedidoLimpio = pedido.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n");
+
+      lines.push(`   - ${hora}`);
+      lines.push(`     ${pedidoLimpio.split("\n").join("\n     ")}`);
     }
   }
   return lines.join("\n");
@@ -433,7 +437,7 @@ async function sendText(to, text) {
   );
 }
 
-async function sendButtonsMenu(to, bodyText = "Hola 👋 Soy el asistente de la Carnicería Biel.\n\nSíguenos en Instagram: https://www.instagram.com/carniceria3iel/\nPara cualquier consulta llame al 663285129.\n\nElija una opción:") {
+async function sendButtonsMenu(to, bodyText = "Hola 👋 Soy el asistente de la Carnicería Biel.\n\nSíguenos en Instagram: https://www.instagram.com/carniceria3iel/\nPara cualquier consulta llame al 976185848 en horario comercial.\n\nElija una opción:") {
   // Botones interactivos (máx. 3)
   return axios.post(
     GRAPH_URL,
@@ -541,7 +545,7 @@ async function handleOption(to, option) {
       userState.set(to, { awaitingOrder: true });
       await sendText(
         to,
-        "Para hacer su pedido, por favor indique con detalle cómo quiere que le preparemos cada producto:\n• Cantidad (g/kg/filetes/unidades)\n• Corte y grosor (filetes/dados/trozos/deshuesado...)\n• Cómo lo va a cocinar (guisar/horno/plancha/brasa...)"
+        "*Importante*\n\nPara hacer su pedido, por favor indique con detalle en *un solo mensaje* cómo quiere que le preparemos cada producto:\n\n• Cantidad (g/kg/filetes/unidades)\n• Corte y grosor (filetes/dados/trozos/deshuesado...)\n• Cómo lo va a cocinar (guisar/horno/plancha/brasa...)\n\nAñada al final del pedido el nombre de la persona que irá a recogerlo."
       );
       return;
     }

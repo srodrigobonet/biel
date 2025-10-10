@@ -26,3 +26,4 @@ curl -X POST "https://graph.facebook.com/v20.0/$WHATSAPP_PHONE_NUMBER_ID/message
     "text":{"body":"Prueba inicial desde la Cloud API ✅"}
   }'
 
+10. Recuerda cargar todas las variables de entorno en Render -> Environment.
